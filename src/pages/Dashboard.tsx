@@ -70,56 +70,33 @@ export function Dashboard() {
 
   const loadData = async () => {
     try {
-      // Load documents from mock service
-      const mockDocuments = await documentService.getDocuments('demo-user')
+      // Always use demo data since database is not available
+      const { documentService, analyticsService } = await import('@/lib/blink')
       
-      // Convert to dashboard format
-      const convertedDocs = mockDocuments.map(doc => ({
-        id: doc.id,
-        name: doc.title,
-        type: doc.matter_type || 'Contract' as any,
-        status: doc.status === 'completed' ? 'Analyzed' : doc.status === 'processing' ? 'Processing' : 'Uploaded' as any,
-        uploadedAt: doc.created_at,
-        analyzedAt: doc.updated_at,
-        size: doc.file_size ? `${(doc.file_size / 1024 / 1024).toFixed(1)} MB` : '0 MB',
-        clauses: doc.key_clauses?.length || Math.floor(Math.random() * 15) + 5,
-        risks: doc.risk_level === 'high' ? 3 : doc.risk_level === 'medium' ? 1 : 0,
-        summary: doc.summary || '',
-        content: doc.content,
-        userId: doc.user_id,
-        folderId: undefined,
-        tags: doc.tags || [],
-        fileUrl: doc.file_url,
-        confidence: 0.85 + Math.random() * 0.1,
-        priority: 'Medium' as any,
-        assignedTo: undefined,
-        reviewedBy: undefined,
-        metadata: {}
-      }))
+      const [userDocuments, analyticsData] = await Promise.all([
+        documentService.getDocuments('demo-user'),
+        analyticsService.getAnalytics('demo-user')
+      ])
       
-      setDocuments(convertedDocs)
-      
-      // Mock analytics data
-      const analyticsData = {
-        totalDocuments: convertedDocs.length,
-        documentsThisMonth: Math.floor(convertedDocs.length * 0.3),
-        totalQueries: 47,
-        queriesThisMonth: 12,
-        timeSaved: convertedDocs.length * 2.5,
-        riskAlerts: convertedDocs.filter(d => d.risks > 0).length,
-        averageProcessingTime: 3.2,
-        accuracyScore: 94.5
-      }
-      
+      setDocuments(userDocuments)
       setAnalytics(analyticsData)
+      
     } catch (error) {
-      console.warn('Failed to load data:', error)
-      // Fallback to demo data
-      DataService.initializeData()
-      const allDocuments = DataService.getDocuments()
-      const analyticsData = DataService.getAnalytics()
-      setDocuments(allDocuments)
-      setAnalytics(analyticsData)
+      console.error('Failed to load demo data:', error)
+      // Final fallback to empty state
+      setDocuments([])
+      setAnalytics({
+        totalDocuments: 0,
+        totalQueries: 0,
+        timeSaved: 0,
+        riskAlerts: 0,
+        documentsThisMonth: 0,
+        queriesThisMonth: 0,
+        averageProcessingTime: 0,
+        accuracyRate: 0,
+        topDocumentTypes: [],
+        riskTrends: []
+      })
     }
   }
 

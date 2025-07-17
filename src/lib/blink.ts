@@ -292,21 +292,14 @@ export const documentService = {
   },
 
   async getDocuments(userId?: string): Promise<Document[]> {
+    // Always use fallback data for demo since database is not available
     try {
-      const user = userId || DEMO_USER.id
-      
-      const documents = await blink.db.documents.list({
-        where: { userId: user },
-        orderBy: { createdAt: 'desc' }
-      })
-
-      return documents
-    } catch (error) {
-      console.warn('Database not available for documents, using fallback:', error)
-      // Import and use local data service as fallback
       const { DataService } = await import('./data')
       DataService.initializeData()
       return DataService.getDocuments()
+    } catch (error) {
+      console.error('Failed to load demo data:', error)
+      return []
     }
   },
 
@@ -365,8 +358,11 @@ export const documentService = {
   }
 }
 
-// Chat service with real AI integration
-export const chatService = {
+// Import chat service from separate file
+export { chatService } from './chatService'
+
+// Legacy chat service (kept for compatibility)
+const legacyChatService = {
   async sendMessage(content: string, sessionId?: string): Promise<ChatMessage> {
     const user = DEMO_USER
     
@@ -477,86 +473,33 @@ Provide a helpful, accurate response based on the documents. If you reference sp
 // Analytics service
 export const analyticsService = {
   async getAnalytics(userId?: string): Promise<AnalyticsData> {
+    // Always use fallback data for demo since database is not available
     try {
-      const user = userId || DEMO_USER.id
-      
-      // Get document statistics
-      const documents = await blink.db.documents.list({
-        where: { userId: user }
-      })
-
-      const messages = await blink.db.chatMessages.list({
-        where: { userId: user, type: 'user' }
-      })
-
-      const clauses = await blink.db.documentClauses.list({
-        where: { userId: user }
-      })
-
-      // Calculate metrics
-      const totalDocuments = documents.length
-      const totalQueries = messages.length
-      const riskAlerts = clauses.filter(c => c.riskLevel === 'High' || c.riskLevel === 'Critical').length
-      
-      // This month's data
-      const startOfMonth = new Date()
-      startOfMonth.setDate(1)
-      startOfMonth.setHours(0, 0, 0, 0)
-
-      const documentsThisMonth = documents.filter(d => 
-        new Date(d.createdAt) >= startOfMonth
-      ).length
-
-      const queriesThisMonth = messages.filter(m => 
-        new Date(m.createdAt) >= startOfMonth
-      ).length
-
-      // Document type distribution
-      const typeCount = documents.reduce((acc, doc) => {
-        acc[doc.type] = (acc[doc.type] || 0) + 1
-        return acc
-      }, {} as Record<string, number>)
-
-      const topDocumentTypes = Object.entries(typeCount)
-        .map(([type, count]) => ({ type, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5)
-
-      return {
-        totalDocuments,
-        totalQueries,
-        timeSaved: Math.floor(totalDocuments * 2.5), // Estimate 2.5 hours saved per document
-        riskAlerts,
-        documentsThisMonth,
-        queriesThisMonth,
-        averageProcessingTime: 45, // seconds
-        accuracyRate: 97.3,
-        topDocumentTypes,
-        riskTrends: [] // Would be calculated from historical data
-      }
-    } catch (error) {
-      console.warn('Database not available for analytics, using fallback:', error)
-      // Import and use local data service as fallback
       const { DataService } = await import('./data')
       DataService.initializeData()
       return DataService.getAnalytics()
+    } catch (error) {
+      console.error('Failed to load demo analytics:', error)
+      // Return empty analytics as final fallback
+      return {
+        totalDocuments: 0,
+        totalQueries: 0,
+        timeSaved: 0,
+        riskAlerts: 0,
+        documentsThisMonth: 0,
+        queriesThisMonth: 0,
+        averageProcessingTime: 0,
+        accuracyRate: 0,
+        topDocumentTypes: [],
+        riskTrends: []
+      }
     }
   },
 
   async trackEvent(eventType: string, eventData?: any): Promise<void> {
-    try {
-      const user = DEMO_USER
-      
-      await blink.db.analyticsEvents.create({
-        id: `event_${Date.now()}`,
-        userId: user.id,
-        eventType,
-        eventData
-      })
-    } catch (error) {
-      console.warn('Database not available for event tracking:', error)
-      // Silently fail for analytics tracking
-    }
+    // Skip database tracking for demo mode
+    console.log('Demo mode: Event tracked locally:', { eventType, eventData })
+    // Silently succeed for demo mode
   }
 }
 

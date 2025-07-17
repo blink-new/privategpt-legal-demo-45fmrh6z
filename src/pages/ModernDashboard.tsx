@@ -90,34 +90,17 @@ export function ModernDashboard() {
     try {
       setIsLoading(true)
       
-      // Try to load from Blink database first, fallback to local storage
-      try {
-        const [userDocuments, analyticsData] = await Promise.all([
-          documentService.getDocuments(user.id),
-          analyticsService.getAnalytics(user.id)
-        ])
+      // Always use demo data since database is not available
+      const [userDocuments, analyticsData] = await Promise.all([
+        documentService.getDocuments(user.id),
+        analyticsService.getAnalytics(user.id)
+      ])
 
-        setDocuments(userDocuments)
-        setAnalytics(analyticsData)
-        
-        // Track dashboard view
-        await analyticsService.trackEvent('dashboard_viewed')
-        
-      } catch (dbError) {
-        console.warn('Database not available, using demo data:', dbError)
-        
-        // Fallback to demo data from DataService
-        const { DataService } = await import('@/lib/data')
-        DataService.initializeData()
-        
-        const demoDocuments = DataService.getDocuments()
-        const demoAnalytics = DataService.getAnalytics()
-        
-        setDocuments(demoDocuments)
-        setAnalytics(demoAnalytics)
-        
-        toast.info('Using demo data - database will be available soon')
-      }
+      setDocuments(userDocuments)
+      setAnalytics(analyticsData)
+      
+      // Track dashboard view (demo mode)
+      await analyticsService.trackEvent('dashboard_viewed')
       
     } catch (error) {
       console.error('Failed to load dashboard data:', error)
